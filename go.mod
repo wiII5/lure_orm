@@ -1,4 +1,4 @@
-module github.bitech.jp/lure_orm
+module github.com/wiII5/lure_orm
 
 go 1.23
 
