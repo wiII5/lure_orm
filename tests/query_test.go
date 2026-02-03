@@ -123,7 +123,7 @@ func TestSelectWithLike(t *testing.T) {
 }
 
 func TestSelectWithRawWhere(t *testing.T) {
-	q := lure_orm.Select("*").From("Users").Where("Age >= ? AND Age <= ?", 18, 65)
+	q := lure_orm.Select("*").From("Users").WhereRaw("Age >= ? AND Age <= ?", 18, 65)
 	stmt, err := q.ToStatement()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -164,6 +164,140 @@ func TestQueryWithoutColumns(t *testing.T) {
 	_, err := q.ToStatement()
 	if err == nil {
 		t.Error("expected error for missing columns")
+	}
+}
+
+func TestOrConditions(t *testing.T) {
+	q := lure_orm.Select("*").From("Users").Eq("Status", "active").OrEq("Status", "pending")
+	stmt, err := q.ToStatement()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(stmt.SQL, "Status = @p1 OR Status = @p2") {
+		t.Errorf("expected OR condition, got: %s", stmt.SQL)
+	}
+}
+
+func TestMixedAndOrConditions(t *testing.T) {
+	q := lure_orm.Select("*").From("Users").
+		Eq("Type", "user").
+		Eq("Status", "active").
+		OrEq("Status", "pending")
+	stmt, err := q.ToStatement()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should be: Type = @p1 AND Status = @p2 OR Status = @p3
+	if !strings.Contains(stmt.SQL, "Type = @p1 AND Status = @p2 OR Status = @p3") {
+		t.Errorf("expected mixed AND/OR, got: %s", stmt.SQL)
+	}
+}
+
+func TestWhereGroup(t *testing.T) {
+	q := lure_orm.Select("*").From("Users").
+		Eq("Type", "user").
+		WhereGroup(func(sub *lure_orm.Query) {
+			sub.Eq("Status", "active").OrEq("Status", "pending")
+		})
+	stmt, err := q.ToStatement()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should be: Type = @p1 AND (Status = @p2 OR Status = @p3)
+	if !strings.Contains(stmt.SQL, "Type = @p1 AND (Status = @p2 OR Status = @p3)") {
+		t.Errorf("expected grouped condition, got: %s", stmt.SQL)
+	}
+}
+
+func TestOrWhereGroup(t *testing.T) {
+	q := lure_orm.Select("*").From("Users").
+		WhereGroup(func(sub *lure_orm.Query) {
+			sub.Eq("Type", "admin").Eq("Status", "active")
+		}).
+		OrWhereGroup(func(sub *lure_orm.Query) {
+			sub.Eq("Type", "user").Eq("Status", "active")
+		})
+	stmt, err := q.ToStatement()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should be: (Type = @p1 AND Status = @p2) OR (Type = @p3 AND Status = @p4)
+	if !strings.Contains(stmt.SQL, "(Type = @p1 AND Status = @p2) OR (Type = @p3 AND Status = @p4)") {
+		t.Errorf("expected OR grouped conditions, got: %s", stmt.SQL)
+	}
+}
+
+func TestOrIn(t *testing.T) {
+	q := lure_orm.Select("*").From("Users").Eq("Type", "user").OrIn("Status", []string{"active", "pending"})
+	stmt, err := q.ToStatement()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(stmt.SQL, "Type = @p1 OR Status IN UNNEST(@p2)") {
+		t.Errorf("expected OR IN, got: %s", stmt.SQL)
+	}
+}
+
+func TestWhereWithCond(t *testing.T) {
+	q := lure_orm.Select("*").From("Users").Where(lure_orm.And{
+		lure_orm.Eq{"PlayerId": "player1", "Email": "test@example.com"},
+		lure_orm.GtOrEq{"CreatedAt": "2024-01-01"},
+	})
+	stmt, err := q.ToStatement()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Should contain the conditions
+	if !strings.Contains(stmt.SQL, "WHERE") {
+		t.Errorf("expected WHERE clause, got: %s", stmt.SQL)
+	}
+	if !strings.Contains(stmt.SQL, ">=") {
+		t.Errorf("expected >= operator for GtOrEq, got: %s", stmt.SQL)
+	}
+}
+
+func TestEqArr(t *testing.T) {
+	q := lure_orm.Select("*").From("Users").Where(lure_orm.EqArr{"Email": []string{"a@test.com", "b@test.com"}})
+	stmt, err := q.ToStatement()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(stmt.SQL, "Email IN UNNEST(@p1)") {
+		t.Errorf("expected IN UNNEST for EqArr, got: %s", stmt.SQL)
+	}
+}
+
+func TestWhereWithComplexCond(t *testing.T) {
+	q := lure_orm.Select("*").From("Users").Where(lure_orm.Or{
+		lure_orm.And{
+			lure_orm.Eq{"Type": "admin"},
+			lure_orm.Eq{"Status": "active"},
+		},
+		lure_orm.And{
+			lure_orm.Eq{"Type": "user"},
+			lure_orm.Gte{"Level": 10},
+		},
+	})
+	stmt, err := q.ToStatement()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(stmt.SQL, "WHERE") {
+		t.Errorf("expected WHERE clause, got: %s", stmt.SQL)
+	}
+	if !strings.Contains(stmt.SQL, " OR ") {
+		t.Errorf("expected OR in query, got: %s", stmt.SQL)
+	}
+}
+
+func TestToStmt(t *testing.T) {
+	q := lure_orm.Select("*").From("Users").Eq("Status", "active")
+	stmt, err := q.ToStmt()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !strings.Contains(stmt.SQL, "SELECT * FROM Users WHERE Status = @p1") {
+		t.Errorf("unexpected SQL from ToStmt: %s", stmt.SQL)
 	}
 }
 
