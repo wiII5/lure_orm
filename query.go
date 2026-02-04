@@ -9,14 +9,15 @@ import (
 
 // Query represents a SQL SELECT query builder.
 type Query struct {
-	columns    string
-	table      string
-	conditions []condition
-	orderBy    string
-	limit      int64
-	offset     int64
-	forceIndex string
-	paramIndex int
+	columns       string
+	extraColumns  []string
+	table         string
+	conditions    []condition
+	orderBy       string
+	limit         int64
+	offset        int64
+	forceIndex    string
+	paramIndex    int
 }
 
 type conditionType int
@@ -40,6 +41,21 @@ func Select(columns string) *Query {
 // From sets the table name.
 func (q *Query) From(table string) *Query {
 	q.table = table
+	return q
+}
+
+// Column adds an additional column expression to the SELECT clause.
+// Useful for ARRAY subqueries like:
+//
+//	Column(fmt.Sprintf(`ARRAY(SELECT AS STRUCT %s FROM %s WHERE ...) AS Items`, columns, table))
+func (q *Query) Column(expr string) *Query {
+	q.extraColumns = append(q.extraColumns, expr)
+	return q
+}
+
+// Columns adds multiple column expressions to the SELECT clause.
+func (q *Query) Columns(exprs ...string) *Query {
+	q.extraColumns = append(q.extraColumns, exprs...)
 	return q
 }
 
@@ -394,7 +410,7 @@ func (q *Query) ToStatement() (spanner.Statement, error) {
 	if q.table == "" {
 		return spanner.Statement{}, fmt.Errorf("lure_orm: table name is required")
 	}
-	if q.columns == "" {
+	if q.columns == "" && len(q.extraColumns) == 0 {
 		return spanner.Statement{}, fmt.Errorf("lure_orm: columns are required")
 	}
 
@@ -403,6 +419,13 @@ func (q *Query) ToStatement() (spanner.Statement, error) {
 
 	sb.WriteString("SELECT ")
 	sb.WriteString(q.columns)
+	// Append extra columns
+	for _, col := range q.extraColumns {
+		if q.columns != "" || len(q.extraColumns) > 1 {
+			sb.WriteString(", ")
+		}
+		sb.WriteString(col)
+	}
 	sb.WriteString(" FROM ")
 	sb.WriteString(q.table)
 
