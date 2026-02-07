@@ -35,30 +35,9 @@ func (e Eq) build(paramIndex *int) (string, map[string]interface{}) {
 	return "(" + strings.Join(parts, " AND ") + ")", params
 }
 
+// EqArr is deprecated: use In instead.
 // EqArr represents equality conditions with array values: column IN UNNEST(values)
-// Usage: EqArr{"column": []string{"a", "b", "c"}}
-type EqArr map[string]interface{}
-
-func (e EqArr) build(paramIndex *int) (string, map[string]interface{}) {
-	if len(e) == 0 {
-		return "", nil
-	}
-
-	var parts []string
-	params := make(map[string]interface{})
-
-	for col, val := range e {
-		*paramIndex++
-		paramName := fmt.Sprintf("p%d", *paramIndex)
-		parts = append(parts, fmt.Sprintf("%s IN UNNEST(@%s)", col, paramName))
-		params[paramName] = val
-	}
-
-	if len(parts) == 1 {
-		return parts[0], params
-	}
-	return "(" + strings.Join(parts, " AND ") + ")", params
-}
+type EqArr = In
 
 // NotEq represents not-equality conditions: column != value
 type NotEq map[string]interface{}
@@ -358,6 +337,25 @@ func (o Or) build(paramIndex *int) (string, map[string]interface{}) {
 		return parts[0], params
 	}
 	return "(" + strings.Join(parts, " OR ") + ")", params
+}
+
+// Not represents a negated condition: NOT (condition)
+// Usage: Not{Eq{"col": val}} generates "NOT (col = @p1)"
+type Not struct {
+	Cond Cond
+}
+
+func (n Not) build(paramIndex *int) (string, map[string]interface{}) {
+	if n.Cond == nil {
+		return "", nil
+	}
+
+	sql, params := n.Cond.build(paramIndex)
+	if sql == "" {
+		return "", nil
+	}
+
+	return "NOT (" + sql + ")", params
 }
 
 // Raw represents a raw SQL condition with parameters

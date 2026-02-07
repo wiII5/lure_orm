@@ -95,6 +95,7 @@ func (q *Query) WhereRaw(cond string, args ...interface{}) *Query {
 }
 
 // OrWhereRaw adds a raw WHERE condition with named parameters (OR).
+// Deprecated: Use OrWhereCond(lure_orm.Raw{SQL: cond, Args: args}) instead for complex conditions.
 func (q *Query) OrWhereRaw(cond string, args ...interface{}) *Query {
 	params := make(map[string]interface{})
 	replaced := cond
@@ -108,6 +109,7 @@ func (q *Query) OrWhereRaw(cond string, args ...interface{}) *Query {
 }
 
 // Eq adds a column = value condition (AND).
+// Deprecated: Use Where(lure_orm.Eq{column: value}) instead.
 func (q *Query) Eq(column string, value interface{}) *Query {
 	paramName := q.nextParam()
 	q.conditions = append(q.conditions, condition{
