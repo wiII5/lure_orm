@@ -47,7 +47,6 @@ users, err := lure_orm.Find[User](ctx, txn, q)
 q := lure_orm.Select("*").
     From("Users").
     Eq("Email", email).
-    IsNull("DeleteTime").
     Limit(1)
 user, err := lure_orm.FindOne[User](ctx, txn, q)
 
@@ -123,7 +122,6 @@ users, err := lure_orm.Find[User](ctx, txn, q)
 var account *AdminAccount
 err := orm.Model(&account).
     Where("Email = ?", email).
-    Where("DeleteTime IS NULL").
     First(ctx, txn)
 // account is populated via pointer
 ```
@@ -133,7 +131,6 @@ err := orm.Model(&account).
 q := lure_orm.Select(AdminAccountColumnNames).
     From(AdminAccountTableName).
     Eq(AdminAccountColumn_Email, email).
-    IsNull(AdminAccountColumn_DeleteTime).
     Limit(1)
 account, err := lure_orm.FindOne[AdminAccount](ctx, txn, q)
 // account is returned directly

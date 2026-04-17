@@ -20,9 +20,6 @@ const (
 	// TagUpdateTime marks a field to be auto-set on update.
 	TagUpdateTime = "update_time"
 
-	// TagDeleteTime marks a field for soft delete tracking.
-	TagDeleteTime = "delete_time"
-
 	// TagIgnoreWrite marks a field to be ignored on write operations.
 	TagIgnoreWrite = "ignore_write"
 )

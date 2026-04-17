@@ -87,7 +87,9 @@ func QueryExists(ctx context.Context, txn ReadRunner, stmt spanner.Statement) (b
 }
 
 // InsertStruct buffers an insert mutation from a struct.
+// Automatically sets CreatedAt and UpdatedAt to time.Now().
 func InsertStruct(ctx context.Context, txn ReadWriteRunner, table string, v interface{}) error {
+	setInsertTimestamps(v)
 	m, err := spanner.InsertStruct(table, v)
 	if err != nil {
 		return err
@@ -96,7 +98,9 @@ func InsertStruct(ctx context.Context, txn ReadWriteRunner, table string, v inte
 }
 
 // UpdateStruct buffers an update mutation from a struct.
+// Automatically preserves CreatedAt from Original and sets UpdatedAt to time.Now().
 func UpdateStruct(ctx context.Context, txn ReadWriteRunner, table string, v interface{}) error {
+	setUpdateTimestamps(v)
 	m, err := spanner.UpdateStruct(table, v)
 	if err != nil {
 		return err
@@ -105,7 +109,9 @@ func UpdateStruct(ctx context.Context, txn ReadWriteRunner, table string, v inte
 }
 
 // InsertOrUpdateStruct buffers an insert-or-update mutation from a struct.
+// Automatically sets UpdatedAt to time.Now(). Sets CreatedAt only if zero.
 func InsertOrUpdateStruct(ctx context.Context, txn ReadWriteRunner, table string, v interface{}) error {
+	setInsertTimestamps(v)
 	m, err := spanner.InsertOrUpdateStruct(table, v)
 	if err != nil {
 		return err
@@ -114,12 +120,14 @@ func InsertOrUpdateStruct(ctx context.Context, txn ReadWriteRunner, table string
 }
 
 // InsertStructMulti buffers multiple insert mutations from structs.
+// Automatically sets CreatedAt and UpdatedAt to time.Now() on each item.
 func InsertStructMulti[T any](ctx context.Context, txn ReadWriteRunner, table string, items []*T) error {
 	if len(items) == 0 {
 		return nil
 	}
 	mutations := make([]*spanner.Mutation, 0, len(items))
 	for _, item := range items {
+		setInsertTimestamps(item)
 		m, err := spanner.InsertStruct(table, item)
 		if err != nil {
 			return err
@@ -130,12 +138,14 @@ func InsertStructMulti[T any](ctx context.Context, txn ReadWriteRunner, table st
 }
 
 // UpdateStructMulti buffers multiple update mutations from structs.
+// Automatically preserves CreatedAt from Original and sets UpdatedAt to time.Now() on each item.
 func UpdateStructMulti[T any](ctx context.Context, txn ReadWriteRunner, table string, items []*T) error {
 	if len(items) == 0 {
 		return nil
 	}
 	mutations := make([]*spanner.Mutation, 0, len(items))
 	for _, item := range items {
+		setUpdateTimestamps(item)
 		m, err := spanner.UpdateStruct(table, item)
 		if err != nil {
 			return err

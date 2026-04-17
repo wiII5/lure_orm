@@ -48,7 +48,6 @@ func TestSelectWithMultipleConditions(t *testing.T) {
 	q := lure_orm.Select("*").
 		From("Users").
 		Eq("Status", "active").
-		IsNull("DeleteTime").
 		Gt("Age", 18)
 	stmt, err := q.ToStatement()
 	if err != nil {
@@ -56,9 +55,6 @@ func TestSelectWithMultipleConditions(t *testing.T) {
 	}
 	if !strings.Contains(stmt.SQL, "Status = @p1") {
 		t.Errorf("missing Status condition: %s", stmt.SQL)
-	}
-	if !strings.Contains(stmt.SQL, "DeleteTime IS NULL") {
-		t.Errorf("missing DeleteTime IS NULL: %s", stmt.SQL)
 	}
 	if !strings.Contains(stmt.SQL, "Age > @p2") {
 		t.Errorf("missing Age condition: %s", stmt.SQL)

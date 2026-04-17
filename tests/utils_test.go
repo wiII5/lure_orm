@@ -22,20 +22,6 @@ func TestFindPrimaryKeyColumn(t *testing.T) {
 	}
 }
 
-func TestFindDeleteTimeColumn(t *testing.T) {
-	col := utils.FindDeleteTimeColumn[User]()
-	if col != "DeleteTime" {
-		t.Errorf("expected 'DeleteTime', got %q", col)
-	}
-}
-
-func TestFindDeleteTimeColumnNotFound(t *testing.T) {
-	col := utils.FindDeleteTimeColumn[DataTypeTest]()
-	if col != "" {
-		t.Errorf("expected empty string, got %q", col)
-	}
-}
-
 func TestIsNullable(t *testing.T) {
 	tests := []struct {
 		name     string

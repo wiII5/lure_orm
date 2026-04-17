@@ -19,7 +19,6 @@ type User struct {
 	Tags       []string          `spanner:"Tags"`
 	CreateTime time.Time         `spanner:"CreateTime" lure_orm:"create_time"`
 	UpdateTime time.Time         `spanner:"UpdateTime" lure_orm:"update_time"`
-	DeleteTime spanner.NullTime  `spanner:"DeleteTime" lure_orm:"delete_time"`
 }
 
 // Article is a test model representing an article.
@@ -32,7 +31,6 @@ type Article struct {
 	ViewCount   int64            `spanner:"ViewCount" lure_orm:"ignore_write"`
 	CreateTime  time.Time        `spanner:"CreateTime" lure_orm:"create_time"`
 	UpdateTime  time.Time        `spanner:"UpdateTime" lure_orm:"update_time"`
-	DeleteTime  spanner.NullTime `spanner:"DeleteTime" lure_orm:"delete_time"`
 }
 
 // DataTypeTest is a model for testing various Spanner data types.

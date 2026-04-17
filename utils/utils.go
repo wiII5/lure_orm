@@ -56,27 +56,6 @@ func GetFieldTag[T any](fieldName string) string {
 	return field.Tag.Get(TagLureORM)
 }
 
-// FindDeleteTimeColumn returns the column name marked with delete_time tag.
-func FindDeleteTimeColumn[T any]() string {
-	var zero T
-	t := reflect.TypeOf(zero)
-	if t.Kind() == reflect.Ptr {
-		t = t.Elem()
-	}
-
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		if field.Tag.Get(TagLureORM) == TagDeleteTime {
-			name := field.Tag.Get(TagSpanner)
-			if name == "" {
-				name = field.Name
-			}
-			return name
-		}
-	}
-	return ""
-}
-
 // FindPrimaryKeyColumn returns the column name marked with primary tag.
 func FindPrimaryKeyColumn[T any]() string {
 	var zero T
