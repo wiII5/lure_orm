@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.bitech.jp/lure_orm/logger"
+	"github.com/wiII5/lure_orm/logger"
 )
 
 func TestLoggerNew(t *testing.T) {

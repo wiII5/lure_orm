@@ -5,6 +5,68 @@ import (
 	"time"
 )
 
+// EntityWithPK is implemented by generated entities and provides Spanner primary key column names
+// for diff-based partial update logic.
+type EntityWithPK interface {
+	SpannerPrimaryKeyColumns() []string
+}
+
+// diffColumns returns columns/values for a partial UPDATE mutation.
+// It always includes PK columns and UpdatedAt, plus any column whose value differs from Original.
+func diffColumns(v interface{}, pkColumns []string) ([]string, []interface{}) {
+	rv := deref(reflect.ValueOf(v))
+	pkSet := make(map[string]bool, len(pkColumns))
+	for _, pk := range pkColumns {
+		pkSet[pk] = true
+	}
+
+	origField := rv.FieldByName(fieldOriginal)
+	var orig reflect.Value
+	if origField.IsValid() && !origField.IsNil() {
+		orig = deref(origField)
+	}
+
+	rt := rv.Type()
+	var columns []string
+	var values []interface{}
+
+	for i := 0; i < rt.NumField(); i++ {
+		field := rt.Field(i)
+		spannerTag := field.Tag.Get("spanner")
+		if spannerTag == "" || spannerTag == "-" {
+			continue
+		}
+		fv := rv.Field(i).Interface()
+
+		// Always include PK columns
+		if pkSet[spannerTag] {
+			columns = append(columns, spannerTag)
+			values = append(values, fv)
+			continue
+		}
+
+		// Always include UpdatedAt
+		if field.Name == fieldUpdatedAt {
+			columns = append(columns, spannerTag)
+			values = append(values, fv)
+			continue
+		}
+
+		// Include if changed from Original
+		if orig.IsValid() {
+			origFV := orig.FieldByName(field.Name)
+			if origFV.IsValid() && reflect.DeepEqual(fv, origFV.Interface()) {
+				continue // unchanged
+			}
+		}
+
+		columns = append(columns, spannerTag)
+		values = append(values, fv)
+	}
+
+	return columns, values
+}
+
 const (
 	fieldCreatedAt = "CreatedAt"
 	fieldUpdatedAt = "UpdatedAt"
@@ -63,6 +125,16 @@ func setTimeField(v interface{}, fieldName string, val time.Time) {
 		return
 	}
 	f.Set(reflect.ValueOf(val))
+}
+
+// hasOriginal reports whether v has a non-nil Original field.
+func hasOriginal(v interface{}) bool {
+	rv := deref(reflect.ValueOf(v))
+	if rv.Kind() != reflect.Struct {
+		return false
+	}
+	f := rv.FieldByName(fieldOriginal)
+	return f.IsValid() && !f.IsNil()
 }
 
 func deref(v reflect.Value) reflect.Value {

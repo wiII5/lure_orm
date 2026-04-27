@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.bitech.jp/lure_orm"
+	"github.com/wiII5/lure_orm"
 )
 
 func TestSelectBasic(t *testing.T) {

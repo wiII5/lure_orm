@@ -99,8 +99,13 @@ func InsertStruct(ctx context.Context, txn ReadWriteRunner, table string, v inte
 
 // UpdateStruct buffers an update mutation from a struct.
 // Automatically preserves CreatedAt from Original and sets UpdatedAt to time.Now().
+// If the entity implements EntityWithPK and has Original set, only changed columns are updated.
 func UpdateStruct(ctx context.Context, txn ReadWriteRunner, table string, v interface{}) error {
 	setUpdateTimestamps(v)
+	if withPK, ok := v.(EntityWithPK); ok && hasOriginal(v) {
+		cols, vals := diffColumns(v, withPK.SpannerPrimaryKeyColumns())
+		return txn.BufferWrite([]*spanner.Mutation{spanner.Update(table, cols, vals)})
+	}
 	m, err := spanner.UpdateStruct(table, v)
 	if err != nil {
 		return err
@@ -108,15 +113,13 @@ func UpdateStruct(ctx context.Context, txn ReadWriteRunner, table string, v inte
 	return txn.BufferWrite([]*spanner.Mutation{m})
 }
 
-// InsertOrUpdateStruct buffers an insert-or-update mutation from a struct.
-// Automatically sets UpdatedAt to time.Now(). Sets CreatedAt only if zero.
+// InsertOrUpdateStruct buffers an insert or update mutation from a struct.
+// If Original is nil, inserts the row. If Original is set, updates only changed columns (diff-based).
 func InsertOrUpdateStruct(ctx context.Context, txn ReadWriteRunner, table string, v interface{}) error {
-	setInsertTimestamps(v)
-	m, err := spanner.InsertOrUpdateStruct(table, v)
-	if err != nil {
-		return err
+	if hasOriginal(v) {
+		return UpdateStruct(ctx, txn, table, v)
 	}
-	return txn.BufferWrite([]*spanner.Mutation{m})
+	return InsertStruct(ctx, txn, table, v)
 }
 
 // InsertStructMulti buffers multiple insert mutations from structs.
@@ -139,6 +142,7 @@ func InsertStructMulti[T any](ctx context.Context, txn ReadWriteRunner, table st
 
 // UpdateStructMulti buffers multiple update mutations from structs.
 // Automatically preserves CreatedAt from Original and sets UpdatedAt to time.Now() on each item.
+// If an item implements EntityWithPK and has Original set, only changed columns are updated.
 func UpdateStructMulti[T any](ctx context.Context, txn ReadWriteRunner, table string, items []*T) error {
 	if len(items) == 0 {
 		return nil
@@ -146,6 +150,11 @@ func UpdateStructMulti[T any](ctx context.Context, txn ReadWriteRunner, table st
 	mutations := make([]*spanner.Mutation, 0, len(items))
 	for _, item := range items {
 		setUpdateTimestamps(item)
+		if withPK, ok := any(item).(EntityWithPK); ok && hasOriginal(item) {
+			cols, vals := diffColumns(item, withPK.SpannerPrimaryKeyColumns())
+			mutations = append(mutations, spanner.Update(table, cols, vals))
+			continue
+		}
 		m, err := spanner.UpdateStruct(table, item)
 		if err != nil {
 			return err
@@ -155,18 +164,34 @@ func UpdateStructMulti[T any](ctx context.Context, txn ReadWriteRunner, table st
 	return txn.BufferWrite(mutations)
 }
 
-// InsertOrUpdateStructMulti buffers multiple insert-or-update mutations from structs.
+// InsertOrUpdateStructMulti buffers multiple insert or update mutations from structs.
+// Per item: if Original is nil, inserts; if Original is set, updates only changed columns (diff-based).
 func InsertOrUpdateStructMulti[T any](ctx context.Context, txn ReadWriteRunner, table string, items []*T) error {
 	if len(items) == 0 {
 		return nil
 	}
 	mutations := make([]*spanner.Mutation, 0, len(items))
 	for _, item := range items {
-		m, err := spanner.InsertOrUpdateStruct(table, item)
-		if err != nil {
-			return err
+		if hasOriginal(item) {
+			setUpdateTimestamps(item)
+			if withPK, ok := any(item).(EntityWithPK); ok {
+				cols, vals := diffColumns(item, withPK.SpannerPrimaryKeyColumns())
+				mutations = append(mutations, spanner.Update(table, cols, vals))
+			} else {
+				m, err := spanner.UpdateStruct(table, item)
+				if err != nil {
+					return err
+				}
+				mutations = append(mutations, m)
+			}
+		} else {
+			setInsertTimestamps(item)
+			m, err := spanner.InsertStruct(table, item)
+			if err != nil {
+				return err
+			}
+			mutations = append(mutations, m)
 		}
-		mutations = append(mutations, m)
 	}
 	return txn.BufferWrite(mutations)
 }

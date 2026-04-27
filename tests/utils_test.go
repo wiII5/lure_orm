@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/spanner"
-	"github.bitech.jp/lure_orm/utils"
+	"github.com/wiII5/lure_orm/utils"
 )
 
 func TestTableName(t *testing.T) {
