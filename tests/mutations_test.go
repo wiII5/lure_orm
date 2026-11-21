@@ -64,7 +64,7 @@ const trackedTable = "Tracked"
 func TestInsertStruct_BuffersOneMutation(t *testing.T) {
 	txn := &mockTxn{}
 	entity := &TrackedEntity{TrackID: "id1", Name: "test"}
-	if err := lure_orm.InsertStruct(t.Context(), txn, trackedTable, entity); err != nil {
+	if err := lure_orm.InsertStruct(context.Background(), txn, trackedTable, entity); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(txn.mutations) != 1 {
@@ -76,7 +76,7 @@ func TestInsertStruct_SetsCreatedAtAndUpdatedAt(t *testing.T) {
 	txn := &mockTxn{}
 	entity := &TrackedEntity{TrackID: "id1", Name: "test"}
 	before := time.Now()
-	if err := lure_orm.InsertStruct(t.Context(), txn, trackedTable, entity); err != nil {
+	if err := lure_orm.InsertStruct(context.Background(), txn, trackedTable, entity); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	after := time.Now()
@@ -97,7 +97,7 @@ func TestUpdateStruct_BuffersOneMutation(t *testing.T) {
 	txn := &mockTxn{}
 	original := &TrackedEntity{TrackID: "id1", Name: "old"}
 	entity := &TrackedEntity{TrackID: "id1", Name: "new", Original: original}
-	if err := lure_orm.UpdateStruct(t.Context(), txn, trackedTable, entity); err != nil {
+	if err := lure_orm.UpdateStruct(context.Background(), txn, trackedTable, entity); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(txn.mutations) != 1 {
@@ -110,7 +110,7 @@ func TestUpdateStruct_SetsUpdatedAt(t *testing.T) {
 	original := &TrackedEntity{TrackID: "id1", Name: "old"}
 	entity := &TrackedEntity{TrackID: "id1", Name: "new", Original: original}
 	before := time.Now()
-	if err := lure_orm.UpdateStruct(t.Context(), txn, trackedTable, entity); err != nil {
+	if err := lure_orm.UpdateStruct(context.Background(), txn, trackedTable, entity); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	after := time.Now()
@@ -125,7 +125,7 @@ func TestUpdateStruct_PreservesCreatedAt(t *testing.T) {
 	originalCreated := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
 	original := &TrackedEntity{TrackID: "id1", CreatedAt: originalCreated}
 	entity := &TrackedEntity{TrackID: "id1", Name: "new", Original: original}
-	if err := lure_orm.UpdateStruct(t.Context(), txn, trackedTable, entity); err != nil {
+	if err := lure_orm.UpdateStruct(context.Background(), txn, trackedTable, entity); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if !entity.CreatedAt.Equal(originalCreated) {
@@ -148,7 +148,7 @@ func TestUpdateStruct_WithoutEntityWithPK_UsesFullUpdate(t *testing.T) {
 	}
 	txn := &mockTxn{}
 	entity := &simpleEntity{ID: "1", Name: "test"}
-	if err := lure_orm.UpdateStruct(t.Context(), txn, "Simple", entity); err != nil {
+	if err := lure_orm.UpdateStruct(context.Background(), txn, "Simple", entity); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(txn.mutations) != 1 {
@@ -163,7 +163,7 @@ func TestUpdateStruct_WithoutEntityWithPK_UsesFullUpdate(t *testing.T) {
 func TestInsertOrUpdateStruct_InsertWhenNoOriginal(t *testing.T) {
 	txn := &mockTxn{}
 	entity := &TrackedEntity{TrackID: "id1", Name: "new"}
-	if err := lure_orm.InsertOrUpdateStruct(t.Context(), txn, trackedTable, entity); err != nil {
+	if err := lure_orm.InsertOrUpdateStruct(context.Background(), txn, trackedTable, entity); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(txn.mutations) != 1 {
@@ -179,7 +179,7 @@ func TestInsertOrUpdateStruct_UpdateWhenOriginalSet(t *testing.T) {
 	txn := &mockTxn{}
 	original := &TrackedEntity{TrackID: "id1", Name: "old"}
 	entity := &TrackedEntity{TrackID: "id1", Name: "new", Original: original}
-	if err := lure_orm.InsertOrUpdateStruct(t.Context(), txn, trackedTable, entity); err != nil {
+	if err := lure_orm.InsertOrUpdateStruct(context.Background(), txn, trackedTable, entity); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(txn.mutations) != 1 {
@@ -197,7 +197,7 @@ func TestInsertOrUpdateStruct_UpdateWhenOriginalSet(t *testing.T) {
 
 func TestInsertStructMulti_EmptySlice(t *testing.T) {
 	txn := &mockTxn{}
-	if err := lure_orm.InsertStructMulti(t.Context(), txn, trackedTable, []*TrackedEntity{}); err != nil {
+	if err := lure_orm.InsertStructMulti(context.Background(), txn, trackedTable, []*TrackedEntity{}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(txn.mutations) != 0 {
@@ -212,7 +212,7 @@ func TestInsertStructMulti_MultipleMutations(t *testing.T) {
 		{TrackID: "id2", Name: "two"},
 		{TrackID: "id3", Name: "three"},
 	}
-	if err := lure_orm.InsertStructMulti(t.Context(), txn, trackedTable, entities); err != nil {
+	if err := lure_orm.InsertStructMulti(context.Background(), txn, trackedTable, entities); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(txn.mutations) != 3 {
@@ -234,7 +234,7 @@ func TestInsertStructMulti_MultipleMutations(t *testing.T) {
 
 func TestUpdateStructMulti_EmptySlice(t *testing.T) {
 	txn := &mockTxn{}
-	if err := lure_orm.UpdateStructMulti(t.Context(), txn, trackedTable, []*TrackedEntity{}); err != nil {
+	if err := lure_orm.UpdateStructMulti(context.Background(), txn, trackedTable, []*TrackedEntity{}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(txn.mutations) != 0 {
@@ -250,7 +250,7 @@ func TestUpdateStructMulti_MultipleMutations(t *testing.T) {
 		{TrackID: "id1", Name: "new1", Original: original1},
 		{TrackID: "id2", Name: "new2", Original: original2},
 	}
-	if err := lure_orm.UpdateStructMulti(t.Context(), txn, trackedTable, entities); err != nil {
+	if err := lure_orm.UpdateStructMulti(context.Background(), txn, trackedTable, entities); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(txn.mutations) != 2 {
@@ -269,7 +269,7 @@ func TestUpdateStructMulti_MultipleMutations(t *testing.T) {
 
 func TestInsertOrUpdateStructMulti_EmptySlice(t *testing.T) {
 	txn := &mockTxn{}
-	if err := lure_orm.InsertOrUpdateStructMulti(t.Context(), txn, trackedTable, []*TrackedEntity{}); err != nil {
+	if err := lure_orm.InsertOrUpdateStructMulti(context.Background(), txn, trackedTable, []*TrackedEntity{}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(txn.mutations) != 0 {
@@ -286,7 +286,7 @@ func TestInsertOrUpdateStructMulti_MixedInsertAndUpdate(t *testing.T) {
 		Original: &TrackedEntity{TrackID: "id2", Name: "old"},
 	}
 	entities := []*TrackedEntity{newEntity, existingEntity}
-	if err := lure_orm.InsertOrUpdateStructMulti(t.Context(), txn, trackedTable, entities); err != nil {
+	if err := lure_orm.InsertOrUpdateStructMulti(context.Background(), txn, trackedTable, entities); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(txn.mutations) != 2 {
@@ -308,7 +308,7 @@ func TestInsertOrUpdateStructMulti_AllInserts(t *testing.T) {
 		{TrackID: "id1", Name: "one"},
 		{TrackID: "id2", Name: "two"},
 	}
-	if err := lure_orm.InsertOrUpdateStructMulti(t.Context(), txn, trackedTable, entities); err != nil {
+	if err := lure_orm.InsertOrUpdateStructMulti(context.Background(), txn, trackedTable, entities); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(txn.mutations) != 2 {
@@ -322,7 +322,7 @@ func TestInsertOrUpdateStructMulti_AllUpdates(t *testing.T) {
 		{TrackID: "id1", Name: "new1", Original: &TrackedEntity{TrackID: "id1", Name: "old1"}},
 		{TrackID: "id2", Name: "new2", Original: &TrackedEntity{TrackID: "id2", Name: "old2"}},
 	}
-	if err := lure_orm.InsertOrUpdateStructMulti(t.Context(), txn, trackedTable, entities); err != nil {
+	if err := lure_orm.InsertOrUpdateStructMulti(context.Background(), txn, trackedTable, entities); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(txn.mutations) != 2 {
@@ -336,7 +336,7 @@ func TestInsertOrUpdateStructMulti_AllUpdates(t *testing.T) {
 
 func TestDeleteMulti_EmptySlice(t *testing.T) {
 	txn := &mockTxn{}
-	if err := lure_orm.DeleteMulti(t.Context(), txn, trackedTable, []spanner.Key{}); err != nil {
+	if err := lure_orm.DeleteMulti(context.Background(), txn, trackedTable, []spanner.Key{}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(txn.mutations) != 0 {
@@ -351,7 +351,7 @@ func TestDeleteMulti_MultipleKeys(t *testing.T) {
 		spanner.Key{"id2"},
 		spanner.Key{"id3"},
 	}
-	if err := lure_orm.DeleteMulti(t.Context(), txn, trackedTable, keys); err != nil {
+	if err := lure_orm.DeleteMulti(context.Background(), txn, trackedTable, keys); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(txn.mutations) != 3 {
@@ -361,7 +361,7 @@ func TestDeleteMulti_MultipleKeys(t *testing.T) {
 
 func TestDeleteMulti_SingleKey(t *testing.T) {
 	txn := &mockTxn{}
-	if err := lure_orm.DeleteMulti(t.Context(), txn, trackedTable, []spanner.Key{spanner.Key{"id1"}}); err != nil {
+	if err := lure_orm.DeleteMulti(context.Background(), txn, trackedTable, []spanner.Key{spanner.Key{"id1"}}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if len(txn.mutations) != 1 {
